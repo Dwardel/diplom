@@ -128,7 +128,16 @@ export type Report = typeof reports.$inferSelect;
 // Authentication types
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  password1: z.string().min(1, "Password is required"),
+});
+
+export const registerSchema = z.object({
+  username: z.string().min(3),
+  password1: z.string().min(6),
+  firstName: z.string().min(1, "Имя обязательно"),
+  lastName: z.string().min(1, "Фамилия обязательна"),
+  middleName: z.string().optional(),
+  groupId: z.number(),
 });
 
 export type LoginCredentials = z.infer<typeof loginSchema>;

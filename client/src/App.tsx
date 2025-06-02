@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import Login from "@/pages/Login";
 import StudentDashboard from "@/pages/StudentDashboard";
 import TeacherDashboard from "@/pages/TeacherDashboard";
@@ -15,6 +14,13 @@ import AdminRegisterUser from "@/pages/AdminRegisterUser";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AdminUsersManagement from "./pages/AdminUsersManagement";
+import AdminGroupManagement from "./pages/AdminGroupManagement";
+import AdminFacultyManagement from "./pages/AdminFacultyManagent";
+import AdminSubjectsManagement from "./pages/AdminSubjectsManagement";
+import AdminDepartmentManagement from "./pages/AdminDepartmentManagement";
+import TeacherClasses from "./pages/TeacherClasses";
+import StudentRecords from "./pages/StudentAttendaceRecords";
+import { School } from "lucide-react";
 // Динамический импорт страницы регистрации
 const Register = React.lazy(() => import("@/pages/Register"));
 
@@ -73,6 +79,13 @@ function Router() {
       <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} allowedRoles={['admin']} />} />
       <Route path="/admin/register-user" component={() => <ProtectedRoute component={AdminRegisterUser} allowedRoles={['admin']} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersManagement} allowedRoles={['admin']} />} />
+      <Route path="/admin/groups" component={() => <ProtectedRoute component={AdminGroupManagement} allowedRoles={['admin']} />} />
+      <Route path="/admin/faculties" component={() => <ProtectedRoute component={AdminFacultyManagement} allowedRoles={['admin']} />} />
+      <Route path="/admin/subjects" component={() => <ProtectedRoute component={AdminSubjectsManagement} allowedRoles={['admin']} />} />
+      <Route path="/admin/departments" component={() => <ProtectedRoute component={AdminDepartmentManagement} allowedRoles={['admin']} />} />
+      <Route path="/teacher/classes" component={() => <ProtectedRoute component={TeacherClasses} allowedRoles={['teacher']} />} />
+      <Route path="/student/records" component={() => <ProtectedRoute component={StudentRecords} allowedRoles={['student']} />} />
+      
       <Route path="/">
         {() => {
           window.location.href = getDashboardRoute();
@@ -95,7 +108,6 @@ function App() {
           <main className="flex-grow container mx-auto px-4 py-6">
             <Router />
           </main>
-          <Footer />
         </div>
         <Toaster />
       </TooltipProvider>

@@ -64,14 +64,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (username: string, password: string): Promise<User> => {
+  const login = async (username: string, password1: string): Promise<User> => {
     setIsLoading(true);
 
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password1 }),
         credentials: 'include',
       });
 
@@ -100,7 +100,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (data: RegisterData): Promise<User> => {
+   
     setIsLoading(true);
+   
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',

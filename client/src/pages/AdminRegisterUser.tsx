@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { User, School, ArrowLeft } from 'lucide-react';
+import { School, ArrowLeft } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +15,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation, useRoute } from 'wouter';
 
+interface User {
+  id: number;
+  username: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  role: string;
+  groupId?: number;
+}
 // Схема валидации для регистрации нового пользователя администратором
 const registerUserSchema = z.object({
   username: z.string().min(3, 'Имя пользователя должно содержать минимум 3 символа'),
@@ -39,7 +48,6 @@ export default function AdminRegisterUser({ isEditing = false }: { isEditing?: b
   const [, params] = useRoute('/admin/edit-user/:id');
   const userId = params?.id ? parseInt(params.id) : null;
   
-  // Получаем список групп для выбора
   const { data: groups = [] } = useQuery({
     queryKey: ['/api/groups'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
@@ -50,25 +58,14 @@ export default function AdminRegisterUser({ isEditing = false }: { isEditing?: b
     queryKey: ['/api/departments'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     retry: false,
-    onError: () => {
-      console.log('Failed to fetch departments, they may not be implemented yet');
-    }
   });
   
   // Получаем данные пользователя для редактирования
-  const { data: userData, isLoading: isUserLoading } = useQuery({
+  const { data: userData, isLoading: isUserLoading } = useQuery<User>({
     queryKey: [`/api/admin/users/${userId}`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: isEditing && !!userId,
     retry: false,
-    onError: () => {
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось загрузить данные пользователя.',
-        variant: 'destructive',
-      });
-      setLocation('/admin/users');
-    }
   });
   
   const form = useForm<RegisterUserFormData>({
@@ -85,21 +82,21 @@ export default function AdminRegisterUser({ isEditing = false }: { isEditing?: b
     },
   });
   
-  // Заполняем форму данными пользователя при редактировании
-  useEffect(() => {
-    if (isEditing && userData) {
-      form.reset({
-        username: userData.username,
-        password1: '', // Пароль не отображаем
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        middleName: userData.middleName || '',
-        role: userData.role,
-        groupId: userData.groupId ? userData.groupId.toString() : undefined,
-        departmentId: userData.departmentId ? userData.departmentId.toString() : undefined
-      });
-    }
-  }, [userData, isEditing, form]);
+  // // Заполняем форму данными пользователя при редактировании
+  // useEffect(() => {
+  //   if (isEditing && userData) {
+  //     form.reset({
+  //       username: userData.username,
+  //       password1: '', // Пароль не отображаем
+  //       firstName: userData.firstName,
+  //       lastName: userData.lastName,
+  //       middleName: userData.middleName || '',
+  //       role: userData.role,
+  //       groupId: userData.groupId ? userData.groupId.toString() : undefined,
+  //       departmentId: userData.departmentId ? userData.departmentId.toString() : undefined
+  //     });
+  //   }
+  // }, [userData, isEditing, form]);
   
   // Получаем текущую выбранную роль для условного рендеринга полей
   const selectedRole = form.watch('role');
@@ -116,11 +113,6 @@ export default function AdminRegisterUser({ isEditing = false }: { isEditing?: b
       console.log(payload);
       if (isEditing && userId) {
         console.log('Обновление пользователя:', payload);
-        
-        // При редактировании, если пароль пустой, удаляем его из запроса
-        // if (!payload.password) {
-        //   delete payload.password;
-       // }
         
         const res = await apiRequest('POST', '/api/auth/register', payload);
         const user = await res.json();
@@ -178,9 +170,6 @@ export default function AdminRegisterUser({ isEditing = false }: { isEditing?: b
       <Card className="w-full max-w-2xl mx-auto">
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-              <User className="h-5 w-5 text-white" />
-            </div>
             <CardTitle className="text-2xl font-bold">
               {isEditing ? 'Редактирование пользователя' : 'Регистрация пользователя'}
             </CardTitle>
