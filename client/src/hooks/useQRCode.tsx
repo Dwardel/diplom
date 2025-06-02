@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { query } from 'express';
 
 export function useQRCode() {
   const [qrValue, setQrValue] = useState<string | null>(null);
@@ -38,6 +39,8 @@ export function useQRCode() {
         title: 'Success',
         description: 'Attendance marked successfully',
       });
+      console.log(data);
+     queryClient.invalidateQueries({ queryKey: [`/api/teacher/classes/${data.classId}/attendance`] });
       return data;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to mark attendance';

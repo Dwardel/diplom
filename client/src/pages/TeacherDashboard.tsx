@@ -82,6 +82,12 @@ export default function TeacherDashboard() {
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
+  const { data: groupStudents, isLoading: groupStudentsLoading } = useQuery<User[]>({
+    queryKey: [`/api/teacher/group/student/${activeClassInfo.groupId}`],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: !!activeClassInfo,
+  });
+console.log(groupStudents);
   const { data: activeAttendanceRecords, isLoading: activeRecordsLoading } =
     useQuery<AttendanceRecord[]>({
       queryKey: [`/api/teacher/classes/${activeClassId}/attendance`],
@@ -363,7 +369,8 @@ export default function TeacherDashboard() {
     subjectsLoading ||
     groupsLoading ||
     usersLoading ||
-    activeRecordsLoading;
+    activeRecordsLoading||
+    groupStudentsLoading;
 
   const attendanceStats = getActiveClassAttendance(Number(activeClassId));
   const recentClasses = getRecentClasses();
@@ -649,14 +656,53 @@ export default function TeacherDashboard() {
             <div className="col-span-1 lg:col-span-2">
               <div className="bg-gray-50 p-4 rounded-lg">
                 {/* Attendance chart would go here in a real application */}
-                <div className="h-64 flex items-center justify-center">
-                  <div className="text-center">
-                    <BarChart className="text-gray-400 text-5xl mb-2 mx-auto h-16 w-16" />
-                    <p className="text-gray-500">
-                      График посещаемости по неделям
-                    </p>
-                  </div>
-                </div>
+                <div className="p-4 bg-white shadow rounded">
+      <h2 className="text-xl font-semibold mb-4">Список посещения студентов</h2>
+      {groupStudents?.length === 0 ? (
+        <p className="text-gray-500">Нет студентов в этой группе.</p>
+      ) : (
+        <ul className="space-y-2">
+          {groupStudents?.map((student) => {
+            const record = activeAttendanceRecords?.find(
+              (rec) => rec.studentId === student.id
+            );
+            const status = record?.status;
+
+            return (
+              <li
+                key={student.id}
+                className={`flex justify-between items-center p-2 rounded ${
+                  status ? "bg-green-50" : "bg-red-50"
+                }`}
+              >
+                <span>
+                  {student.lastName} {student.firstName}
+                </span>
+                <span
+                  className={`text-sm font-medium ${
+                    status === "present"
+                      ? "text-green-600"
+                      : status === "late"
+                      ? "text-yellow-600"
+                      : status === "absent"
+                      ? "text-red-500"
+                      : "text-red-600"
+                  }`}
+                >
+                  {status === "present"
+                    ? "Присутствовал ✅"
+                    : status === "late"
+                    ? "Опоздал ⏱️"
+                    : status === "absent"
+                    ? "Отсутствовал ❌"
+                    : "QR-код не отсканирован ❌"}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
               </div>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg mb-4">

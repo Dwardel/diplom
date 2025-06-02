@@ -195,6 +195,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+   app.get(
+    "/api/teacher/group/student/:id",
+    isAuthenticated,
+    hasRole(["teacher", "admin"]),
+    async (req: Request, res: Response) => {
+      try {
+        const id = parseInt(req.params.id);
+        const classes = await storage.getUsersByGroupId(id);
+        res.json(classes);
+      } catch (err) {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  );
 
   app.get(
     "/api/admin/attendanceRecords",
