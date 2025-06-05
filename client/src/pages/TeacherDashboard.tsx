@@ -31,6 +31,8 @@ import { Link } from "wouter";
 import { AttendanceRecord, Class, Department, Group, Subject, User } from "@shared/schema";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { query } from "express";
+import { record } from "zod";
 
 
 export default function TeacherDashboard() {
@@ -51,6 +53,11 @@ export default function TeacherDashboard() {
   });
 
   // Fetch teacher's classes
+  const { data: attendanceRecords, isLoading: attendanceRecordsLoading } = useQuery<AttendanceRecord[]>({
+    queryKey: ["/api/admin/attendanceRecords"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
   const { data: classes, isLoading: classesLoading } = useQuery<Class[]>({
     queryKey: ["/api/teacher/classes"],
     queryFn: getQueryFn({ on401: "throw" }),
@@ -83,16 +90,18 @@ export default function TeacherDashboard() {
   });
 
   const { data: groupStudents, isLoading: groupStudentsLoading } = useQuery<User[]>({
-    queryKey: [`/api/teacher/group/student/${activeClassInfo.groupId}`],
+    queryKey: [`/api/teacher/group/student/${activeClassInfo?.groupId}`],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!activeClassInfo,
   });
-console.log(groupStudents);
+
   const { data: activeAttendanceRecords, isLoading: activeRecordsLoading } =
     useQuery<AttendanceRecord[]>({
       queryKey: [`/api/teacher/classes/${activeClassId}/attendance`],
       queryFn: getQueryFn({ on401: "returnNull" }),
-      staleTime: 0,
+      refetchInterval(query) {
+        return 1000;
+      },
       enabled: !!activeClassId,
     });
   const queries =
@@ -114,6 +123,8 @@ console.log(groupStudents);
       })) || [];
   const results = useQueries({ queries });
 
+
+
   // End class mutation
   const endClassMutation = useMutation({
     mutationFn: async (classId: number) => {
@@ -126,6 +137,7 @@ console.log(groupStudents);
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/student/attendance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teacher/classes"] });
+      queryClient.invalidateQueries({queryKey:["/api/admin/attendanceRecords"]});
       setActiveClassId(null);
       setActiveClassInfo(null);
       toast({
@@ -370,7 +382,8 @@ console.log(groupStudents);
     groupsLoading ||
     usersLoading ||
     activeRecordsLoading||
-    groupStudentsLoading;
+    groupStudentsLoading ||
+    attendanceRecordsLoading;
 
   const attendanceStats = getActiveClassAttendance(Number(activeClassId));
   const recentClasses = getRecentClasses();
@@ -397,14 +410,34 @@ console.log(groupStudents);
       const subject = subjects.find((s: Subject) => s.id === item.subjectId);
       const group = groups.find((g: Group) => g.id === item.groupId);
 
-      // Calculate average attendance (mock data for now)
-      const attendancePercentage = Math.floor(Math.random() * 30) + 65; // Random between 65-95%
+      
+      const filteredUsers = users?.filter((user) => user.groupId === item.groupId);
+      const filteredAttendanceRecords = attendanceRecords
+  ?.filter(record =>
+    filteredUsers?.some(user => user.id === record.studentId)
+  )
+  ?.filter(record => {
+    const cls = classes.find(cls => cls.id === record.classId);
+    return cls?.subjectId === item.subjectId;
+  });
 
+
+      
+      if (!filteredAttendanceRecords) {
+        return {
+          id: `${item.subjectId}-${item.groupId}`,
+          subject: subject ? subject.name : "Неизвестный предмет",
+          group: group ? group.name : "Неизвестная группа",
+          percentage: 0,
+        };
+      }
+      console.log(filteredAttendanceRecords)
+      const attendancePercentage = filteredAttendanceRecords?.filter((record) => record.status === "present" || record.status === "late")?.length /filteredAttendanceRecords?.length;
       return {
         id: `${item.subjectId}-${item.groupId}`,
         subject: subject ? subject.name : "Неизвестный предмет",
         group: group ? group.name : "Неизвестная группа",
-        percentage: attendancePercentage,
+        percentage: (attendancePercentage * 100).toFixed(1),
       };
     });
   };
@@ -649,60 +682,64 @@ console.log(groupStudents);
       {/* Class Attendance Stats */}
       <Card className="mb-8">
         <CardContent className="p-6">
-          <h3 className="text-xl font-medium text-gray-800 mb-4">
-            Статистика посещаемости
-          </h3>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="col-span-1 lg:col-span-2">
               <div className="bg-gray-50 p-4 rounded-lg">
                 {/* Attendance chart would go here in a real application */}
                 <div className="p-4 bg-white shadow rounded">
-      <h2 className="text-xl font-semibold mb-4">Список посещения студентов</h2>
-      {groupStudents?.length === 0 ? (
-        <p className="text-gray-500">Нет студентов в этой группе.</p>
-      ) : (
-        <ul className="space-y-2">
-          {groupStudents?.map((student) => {
-            const record = activeAttendanceRecords?.find(
-              (rec) => rec.studentId === student.id
-            );
-            const status = record?.status;
 
-            return (
-              <li
-                key={student.id}
-                className={`flex justify-between items-center p-2 rounded ${
-                  status ? "bg-green-50" : "bg-red-50"
+      <h2 className="text-xl font-semibold mb-4">Список студентов на этой паре</h2>
+      
+  {activeClassId && groupStudents && activeAttendanceRecords ? (
+    groupStudents.length === 0 ? (
+      <p className="text-gray-500">Нет студентов в этой группе.</p>
+    ) : (
+      <ul className="space-y-2">
+        {groupStudents.map((student) => {
+          const record = activeAttendanceRecords.find(
+            (rec) => rec.studentId === student.id
+          );
+          const status = record?.status;
+
+          return (
+            <li
+              key={student.id}
+              className={`flex justify-between items-center p-2 rounded ${
+                status ? "bg-green-50" : "bg-red-50"
+              }`}
+            >
+              <span>
+                {student.lastName} {student.firstName}
+              </span>
+              <span
+                className={`text-sm font-medium ${
+                  status === "present"
+                    ? "text-green-600"
+                    : status === "late"
+                    ? "text-yellow-600"
+                    : status === "absent"
+                    ? "text-red-500"
+                    : "text-red-600"
                 }`}
               >
-                <span>
-                  {student.lastName} {student.firstName}
-                </span>
-                <span
-                  className={`text-sm font-medium ${
-                    status === "present"
-                      ? "text-green-600"
-                      : status === "late"
-                      ? "text-yellow-600"
-                      : status === "absent"
-                      ? "text-red-500"
-                      : "text-red-600"
-                  }`}
-                >
-                  {status === "present"
-                    ? "Присутствовал ✅"
-                    : status === "late"
-                    ? "Опоздал ⏱️"
-                    : status === "absent"
-                    ? "Отсутствовал ❌"
-                    : "QR-код не отсканирован ❌"}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+                {status === "present"
+                  ? "Присутствовал ✅"
+                  : status === "late"
+                  ? "Опоздал ⏱️"
+                  : status === "absent"
+                  ? "Отсутствовал ❌"
+                  : "QR-код не отсканирован ❌"}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    )
+  ) : (
+    <p className="text-gray-500">Нет активного занятия</p>
+  )}
+</div>
+
               </div>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg mb-4">
@@ -724,11 +761,11 @@ console.log(groupStudents);
                         <div>{item.percentage}%</div>
                       </div>
                       <Progress
-                        value={item.percentage}
+                        value={Number(item.percentage)}
                         className={`h-2 ${
-                          item.percentage >= 80
+                          Number(item.percentage) >= 80
                             ? "bg-success"
-                            : item.percentage >= 60
+                            : Number(item.percentage) >= 60
                             ? "bg-primary"
                             : "bg-warning"
                         }`}
