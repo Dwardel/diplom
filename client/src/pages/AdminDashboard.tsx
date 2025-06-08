@@ -375,7 +375,7 @@ export default function AdminDashboard() {
 
       toast({
         title: "Успешно",
-        description: "Отчет скачан",
+        description: "Отчет загружен",
       });
     } catch (error: any) {
       toast({
