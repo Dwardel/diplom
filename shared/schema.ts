@@ -1,6 +1,27 @@
 import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { start } from "repl";
 import { z } from "zod";
+
+// Faculties
+export const faculties = pgTable("faculties", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+});
+
+// Departments (for teachers)
+export const departments = pgTable("departments", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  facultyId: integer("faculty_id").references(() => faculties.id),
+});
+
+// User Groups (student groups)
+export const groups = pgTable("groups", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  departmentId: integer("department_id").references(() => departments.id),
+});
 
 // Users table (combined for all roles)
 export const users = pgTable("users", {
@@ -11,42 +32,23 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   middleName: text("middle_name"),
-  groupId: integer("group_id"),
-  departmentId: integer("department_id"),
-});
-
-// User Groups (student groups)
-export const groups = pgTable("groups", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  facultyId: integer("faculty_id"),
-});
-
-// Departments (for teachers)
-export const departments = pgTable("departments", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  facultyId: integer("faculty_id"),
-});
-
-// Faculties
-export const faculties = pgTable("faculties", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
+  groupId: integer("group_id").references(() => groups.id),
+  departmentId: integer("department_id").references(() => departments.id),
 });
 
 // Subjects
 export const subjects = pgTable("subjects", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  departmentId: integer("department_id").references(() => departments.id),
 });
 
 // Classes/Lectures
 export const classes = pgTable("classes", {
   id: serial("id").primaryKey(),
-  subjectId: integer("subject_id").notNull(),
-  teacherId: integer("teacher_id").notNull(),
-  groupId: integer("group_id").notNull(),
+  subjectId: integer("subject_id").notNull().references(() => subjects.id),
+  teacherId: integer("teacher_id").notNull().references(() => users.id),
+  groupId: integer("group_id").notNull().references(() => groups.id),
   classroom: text("classroom").notNull(),
   date: timestamp("date").notNull(),
   startTime: timestamp("start_time").notNull(),
@@ -58,10 +60,23 @@ export const classes = pgTable("classes", {
 // Attendance Records
 export const attendanceRecords = pgTable("attendance_records", {
   id: serial("id").primaryKey(),
-  classId: integer("class_id").notNull(),
-  studentId: integer("student_id").notNull(),
+  classId: integer("class_id").notNull().references(() => classes.id),
+  studentId: integer("student_id").notNull().references(() => users.id),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   status: text("status").notNull(), // "present", "late", "absent"
+});
+
+// Schedules
+export const schedules = pgTable("schedules", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull().references(() => groups.id),
+  subjectId: integer("subject_id").notNull().references(() => subjects.id),
+  teacherId: integer("user_id").notNull().references(() => users.id),
+  dayOfWeek: integer("day_of_week").notNull(), // 1-7 (Monday-Sunday)
+  classroom: text("classroom").notNull(),
+  weekType: text("week_type").default("both"), // "odd", "even", "both"
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time").notNull(),
 });
 
 // Reports
@@ -71,7 +86,7 @@ export const reports = pgTable("reports", {
   type: text("type").notNull(),
   period: text("period").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  createdBy: integer("created_by").notNull(),
+  createdBy: integer("created_by").notNull().references(() => users.id),
   format: text("format").notNull(),
   data: json("data"),
 });
@@ -81,6 +96,8 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 
 // Schema for inserting a new group
 export const insertGroupSchema = createInsertSchema(groups).omit({ id: true });
+
+export const insertScheduleSchema = createInsertSchema(schedules).omit({ id: true });
 
 // Schema for inserting a new department
 export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true });
@@ -103,6 +120,9 @@ export const insertReportSchema = createInsertSchema(reports).omit({ id: true })
 // Types for DB operations
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export type InsertSchedule = z.infer<typeof insertScheduleSchema>;
+export type Schedule = typeof schedules.$inferSelect;
 
 export type InsertGroup = z.infer<typeof insertGroupSchema>;
 export type Group = typeof groups.$inferSelect;

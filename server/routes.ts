@@ -10,6 +10,7 @@ import { facultiessRoutes } from "./routes/faculties";
 import { usersRoutes } from "./routes/users";
 import { departmentsRoutes } from "./routes/departments";
 import { subjectsRoutes } from "./routes/subjects";
+import { schedulesRoutes } from "./routes/schedules";
 declare module "express-session" {
   interface SessionData {
     userId: number;
@@ -31,7 +32,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }),
     })
   );
-
+  schedulesRoutes(app)
   attendanceRecordsRoutes(app);
   classesRoutes(app);
   groupsRoutes(app)

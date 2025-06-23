@@ -30,11 +30,12 @@ export async function groupsRoutes(app: Express) {
 
            app.post("/api/admin/groups", async (req: Request, res: Response) => {
               try {
-                const { name, facultyId } = req.body; // Используем деструктуризацию
+                console.log(req.body)
+                const { name, departmentId } = req.body; // Используем деструктуризацию
           
                 const [newGroup] = await storage.createGroup({
                   name,
-                  facultyId,
+                  departmentId,
                 });
           
                 res.status(201).json(newGroup);
@@ -70,11 +71,11 @@ export async function groupsRoutes(app: Express) {
                 async (req, res, next) => {
                   try {
                     const groupId = parseInt(req.params.id);
-                    const { name, facultyId } = req.body;
+                    const { name, departmentId } = req.body;
             
                     const groupData = {
                       name,
-                      facultyId,
+                      departmentId,
                     };
                     const updatedGroup = await storage.updateGroup(groupId, groupData);
             

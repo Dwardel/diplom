@@ -21,6 +21,8 @@ import AdminDepartmentManagement from "./pages/AdminDepartmentManagement";
 import TeacherClasses from "./pages/TeacherClasses";
 import StudentRecords from "./pages/StudentAttendaceRecords";
 import { School } from "lucide-react";
+import TeacherSchedule from "./pages/TeacherSchedule";
+import ReportsManagement from "./pages/ReportsManagement";
 // Динамический импорт страницы регистрации
 const Register = React.lazy(() => import("@/pages/Register"));
 
@@ -78,14 +80,10 @@ function Router() {
       <Route path="/teacher" component={() => <ProtectedRoute component={TeacherDashboard} allowedRoles={['teacher', 'admin']} />} />
       <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} allowedRoles={['admin']} />} />
       <Route path="/admin/register-user" component={() => <ProtectedRoute component={AdminRegisterUser} allowedRoles={['admin']} />} />
-      <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersManagement} allowedRoles={['admin']} />} />
-      <Route path="/admin/groups" component={() => <ProtectedRoute component={AdminGroupManagement} allowedRoles={['admin']} />} />
-      <Route path="/admin/faculties" component={() => <ProtectedRoute component={AdminFacultyManagement} allowedRoles={['admin']} />} />
-      <Route path="/admin/subjects" component={() => <ProtectedRoute component={AdminSubjectsManagement} allowedRoles={['admin']} />} />
-      <Route path="/admin/departments" component={() => <ProtectedRoute component={AdminDepartmentManagement} allowedRoles={['admin']} />} />
       <Route path="/teacher/classes" component={() => <ProtectedRoute component={TeacherClasses} allowedRoles={['teacher']} />} />
       <Route path="/student/records" component={() => <ProtectedRoute component={StudentRecords} allowedRoles={['student']} />} />
-      
+      <Route path="/schedule" component={() => <ProtectedRoute component={TeacherSchedule} allowedRoles={['teacher', 'student']} />} />
+      <Route path="/reports" component={() => <ProtectedRoute component={ReportsManagement} allowedRoles={['teacher', 'admin']} />} />
       <Route path="/">
         {() => {
           window.location.href = getDashboardRoute();

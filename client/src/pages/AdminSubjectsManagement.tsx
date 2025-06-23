@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Faculty, Group, Subject, User } from "@shared/schema";
+import { Department, Faculty, Group, Subject, User } from "@shared/schema";
 
 export default function AdminSubjectsManagement() {
   const { toast } = useToast();
@@ -60,6 +60,15 @@ export default function AdminSubjectsManagement() {
       .includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
+    const {
+      data: faculities,
+      isLoading: faculitiesLoadingg,
+      error: faculitiesErrorr,
+    } = useQuery<Department[]>({
+      queryKey: ["/api/departments"],
+      queryFn: getQueryFn({ on401: "returnNull" }),
+    });
+  
 
   // Удаление пользователя
   const handleDeleteUser = async (userId: number) => {
@@ -135,18 +144,14 @@ export default function AdminSubjectsManagement() {
       }
     }
   };
-
+console.log(faculities);
+console.log(filteredUsers);
+const asloading = faculitiesLoading && faculitiesLoadingg;
   return (
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setLocation("/admin")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+        
           <h2 className="text-2xl font-bold">Управление предметами</h2>
         </div>
       </div>
@@ -168,7 +173,7 @@ export default function AdminSubjectsManagement() {
 
       <Card>
         <CardContent className="p-0">
-          {faculitiesLoading ? (
+          { (asloading || faculities === undefined)? (
             <div className="flex justify-center items-center p-8">
               <p>Загрузка предметов...</p>
             </div>
@@ -184,6 +189,7 @@ export default function AdminSubjectsManagement() {
                   <TableRow>
                     <TableHead>ID</TableHead>
                     <TableHead>Предмет</TableHead>
+                    <TableHead>Кафедра</TableHead>
                     <TableHead className="text-right">Действия</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -192,6 +198,12 @@ export default function AdminSubjectsManagement() {
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.id}</TableCell>
                       <TableCell>{user.name}</TableCell>
+                     <TableCell>
+  {
+    faculities?.find((f) => f.id === user.departmentId)?.name ?? 'Неизвестно'
+  }
+</TableCell>
+
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -283,6 +295,39 @@ export default function AdminSubjectsManagement() {
                     }
                     placeholder="Введите название предмета"
                   />
+                </div>
+               <div className="space-y-2">
+                  <label htmlFor="create-department-id" className="text-sm font-medium">
+                    Кафедра
+                  </label>
+                  <Select
+                    value={
+                      faculities?.find((f) => f.id === facultyToCreate?.departmentId)
+                        ?.name ?? ""
+                    }
+                    onValueChange={(selectedName) => {
+                      const selectedFaculty = faculities?.find(
+                        (f) => f.name === selectedName
+                      );
+                      if (selectedFaculty) {
+                        setFacultyToCreate({
+                          ...facultyToCreate,
+                          departmentId: selectedFaculty.id,
+                        });
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Выберите Кафедру" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {faculities?.map((faculty) => (
+                        <SelectItem key={faculty.id} value={faculty.name}>
+                          {faculty.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

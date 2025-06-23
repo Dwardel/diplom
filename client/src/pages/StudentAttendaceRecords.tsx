@@ -31,6 +31,10 @@ interface User {
   groupId?: number;
 }
 
+  
+  
+
+
 export default function StudentRecords() {
   const [, setLocation] = useLocation();
 
@@ -117,13 +121,14 @@ export default function StudentRecords() {
 
   return (
     <div className="mb-6">
+      {
       <Button
         variant="outline"
         size="icon"
         onClick={() => setLocation("/student")}
       >
         <ArrowLeft className="h-4 w-4" />
-      </Button>
+      </Button> }
       {/* Recent Classes */}
           <Card className="mb-6">
         <CardContent className="p-6">

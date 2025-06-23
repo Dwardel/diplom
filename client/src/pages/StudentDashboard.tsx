@@ -12,17 +12,35 @@ import GamificationCard from "@/components/GamificationCard";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { AttendanceRecord, Class, Group, Subject, User } from "@shared/schema";
 import { Link } from "wouter";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-
+import { navigate } from "wouter/use-browser-location";
+import { Label } from "@/components/ui/label";
 
 export default function StudentDashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
- const [userToEdit, setUserToEdit] = useState<Partial<User> | null>(null);
+  const [userToEdit, setUserToEdit] = useState<Partial<User> | null>(null);
+  const [allRecordsFlag, setAllRecordsFlag] = useState(false);
+  const [teacherFilter, setTeacherFilter] = useState("all");
+  const [subjectFilter, setSubjectFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
   // Fetch attendance records
   const { data: attendanceRecords, isLoading: attendanceLoading } = useQuery<
     AttendanceRecord[]
@@ -49,16 +67,20 @@ export default function StudentDashboard() {
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
-    const {
-      data: groups,
-      isLoading: groupsLoading,
-      error: groupsError,
-    } = useQuery<Group[]>({
-      queryKey: ["/api/groups"],
-      queryFn: getQueryFn({ on401: "returnNull" }),
-    });
+  const {
+    data: groups,
+    isLoading: groupsLoading,
+    error: groupsError,
+  } = useQuery<Group[]>({
+    queryKey: ["/api/groups"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+  });
   const isLoading =
-    attendanceLoading || classesLoading || subjectsLoading || teachersLoading || groupsLoading;
+    attendanceLoading ||
+    classesLoading ||
+    subjectsLoading ||
+    teachersLoading ||
+    groupsLoading;
 
   // Calculate attendance statistics
   const calculateStats = () => {
@@ -147,30 +169,54 @@ export default function StudentDashboard() {
       {}
     );
 
-    return attendanceRecords
-      .sort((a: AttendanceRecord, b: AttendanceRecord) => {
-        return (
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        );
-      })
-      .slice(0, 5)
-      .map((record: AttendanceRecord) => {
-        const classInfo = classesMap[record.classId];
-        const subject = classInfo ? subjectsMap[classInfo.subjectId] : null;
-        const teacher = classInfo ? teachersMap[classInfo.teacherId] : null;
+    return allRecordsFlag
+      ? attendanceRecords
+          .sort((a: AttendanceRecord, b: AttendanceRecord) => {
+            return (
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+          })
+          .map((record: AttendanceRecord) => {
+            const classInfo = classesMap[record.classId];
+            const subject = classInfo ? subjectsMap[classInfo.subjectId] : null;
+            const teacher = classInfo ? teachersMap[classInfo.teacherId] : null;
 
-        return {
-          id: record.id,
-          date: formatDateTime(record.timestamp),
-          subject: subject ? subject.name : "Неизвестный предмет",
-          teacher: teacher
-            ? `${teacher.lastName} ${teacher.firstName.charAt(0)}.${
-                teacher.middleName ? teacher.middleName.charAt(0) + "." : ""
-              }`
-            : "Неизвестный преподаватель",
-          status: record.status,
-        };
-      });
+            return {
+              id: record.id,
+              date: formatDateTime(record.timestamp),
+              subject: subject ? subject.name : "Неизвестный предмет",
+              teacher: teacher
+                ? `${teacher.lastName} ${teacher.firstName.charAt(0)}.${
+                    teacher.middleName ? teacher.middleName.charAt(0) + "." : ""
+                  }`
+                : "Неизвестный преподаватель",
+              status: record.status,
+            };
+          })
+      : attendanceRecords
+          .sort((a: AttendanceRecord, b: AttendanceRecord) => {
+            return (
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+          })
+          .slice(0, 3)
+          .map((record: AttendanceRecord) => {
+            const classInfo = classesMap[record.classId];
+            const subject = classInfo ? subjectsMap[classInfo.subjectId] : null;
+            const teacher = classInfo ? teachersMap[classInfo.teacherId] : null;
+
+            return {
+              id: record.id,
+              date: formatDateTime(record.timestamp),
+              subject: subject ? subject.name : "Неизвестный предмет",
+              teacher: teacher
+                ? `${teacher.lastName} ${teacher.firstName.charAt(0)}.${
+                    teacher.middleName ? teacher.middleName.charAt(0) + "." : ""
+                  }`
+                : "Неизвестный преподаватель",
+              status: record.status,
+            };
+          });
   };
 
   // Get today's schedule
@@ -178,48 +224,55 @@ export default function StudentDashboard() {
   const attendanceStats = calculateStats();
   const recentAttendance = getRecentAttendance();
 
+  const filteredRecentAttendance = recentAttendance?.filter((user: any) => {
+    const matchesTeacher =
+      teacherFilter === "all" || user.teacher === teacherFilter;
+
+    const matchesSubject =
+      subjectFilter === "all" || user.subject === subjectFilter;
+    const matchesStatus =
+      statusFilter === "all" || user.status === statusFilter;
+
+    return matchesTeacher && matchesSubject && matchesStatus;
+  });
+
   const handleQRScanSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/student/attendance"] });
   };
 
   const handleUpdateUser = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (userToEdit) {
-        try {
-          await apiRequest(
-            "PUT",
-            '/api/user/change',
-            userToEdit
-          );
-          toast({
-            title: "Пользователь обновлен",
-          });
-  
-          // Обновляем список пользователей
-          queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-        } catch (error) {
-          console.error("Ошибка при обновлении пользователя:", error);
-          toast({
-            title: "Ошибка",
-            description: "Не удалось обновить пользователя.",
-            variant: "destructive",
-          });
-        } finally {
-          setUserToEdit(null);
-        }
+    e.preventDefault();
+    if (userToEdit) {
+      try {
+        await apiRequest("PUT", "/api/user/change", userToEdit);
+        toast({
+          title: "Пользователь обновлен",
+        });
+
+        // Обновляем список пользователей
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      } catch (error) {
+        console.error("Ошибка при обновлении пользователя:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось обновить пользователя.",
+          variant: "destructive",
+        });
+      } finally {
+        setUserToEdit(null);
       }
-    };
+    }
+  };
 
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between mb-4">
-      <h2 className="text-2xl font-medium text-gray-800 mb-4">
-        Панель студента
-      </h2>
-      <Button
-       onClick={() => setUserToEdit(user)}>
-        Изменить профиль
-      </Button>
+        <h2 className="text-2xl font-medium text-gray-800 mb-4">
+          Панель студента
+        </h2>
+        <Button onClick={() => navigate("/schedule")}>Мое расписание</Button>
+
+        <Button onClick={() => setUserToEdit(user)}>Изменить профиль</Button>
       </div>
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -271,7 +324,6 @@ export default function StudentDashboard() {
                 <div className="text-sm text-gray-500">Эта неделя</div>
               </div>
             </div>
-          
           </CardContent>
         </Card>
       </div>
@@ -280,8 +332,110 @@ export default function StudentDashboard() {
       <Card className="mb-6">
         <CardContent className="p-6">
           <h3 className="text-xl font-medium text-gray-800 mb-4">
-            Недавние Занятия
+            {allRecordsFlag ? "Все Занятия" : "Недавние Занятия"}
           </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {/* Преподаватель */}
+            <div>
+              <Label
+                htmlFor="teacher"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Преподаватель
+              </Label>
+              <Select
+                onValueChange={setTeacherFilter}
+                value={teacherFilter}
+                disabled={isLoading || teachers?.length === 0}
+              >
+                <SelectTrigger id="teacher" className="w-full">
+                  <SelectValue placeholder="Выберите преподавателя" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key={0} value="all">
+                    Все
+                  </SelectItem>
+                  {teachers?.map((teacher: any) => {
+                    const fullName = `${
+                      teacher.lastName
+                    } ${teacher.firstName.charAt(0)}.${
+                      teacher.middleName
+                        ? teacher.middleName.charAt(0) + "."
+                        : ""
+                    }`;
+                    return (
+                      <SelectItem key={teacher.id} value={fullName}>
+                        {fullName}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Предмет */}
+            <div>
+              <Label
+                htmlFor="subject"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Предмет
+              </Label>
+              <Select
+                onValueChange={setSubjectFilter}
+                value={subjectFilter}
+                disabled={isLoading || subjects?.length === 0}
+              >
+                <SelectTrigger id="subject" className="w-full">
+                  <SelectValue placeholder="Выберите предмет" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key={0} value="all">
+                    Все
+                  </SelectItem>
+                  {subjects?.map((subject: any) => (
+                    <SelectItem key={subject.id} value={subject.name}>
+                      {subject.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Статус */}
+            <div>
+              <Label
+                htmlFor="status"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Статус
+              </Label>
+              <Select
+                onValueChange={setStatusFilter}
+                value={statusFilter}
+                disabled={isLoading}
+              >
+                <SelectTrigger id="status" className="w-full">
+                  <SelectValue placeholder="Выберите статус занятия" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key={0} value="all">
+                    Все
+                  </SelectItem>
+                  <SelectItem key={1} value="present">
+                    Присутствовал
+                  </SelectItem>
+                  <SelectItem key={2} value="late">
+                    Опоздал
+                  </SelectItem>
+                  <SelectItem key={3} value="absent">
+                    Отсутствовал
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -322,8 +476,8 @@ export default function StudentDashboard() {
                       Загрузка...
                     </td>
                   </tr>
-                ) : recentAttendance.length > 0 ? (
-                  recentAttendance.map((item) => (
+                ) : filteredRecentAttendance.length > 0 ? (
+                  filteredRecentAttendance.map((item) => (
                     <tr key={item.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                         {item.date}
@@ -362,15 +516,18 @@ export default function StudentDashboard() {
             </table>
           </div>
           <div className="flex justify-center mt-4">
-            <Button variant="link" className="text-primary">
-              <Link href="student/records">Все занятия</Link>
+            <Button
+              variant="link"
+              className="text-primary"
+              onClick={() => setAllRecordsFlag(!allRecordsFlag)}
+            >
+              {allRecordsFlag ? "Недавние Занятия" : "Все Занятия"}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-
-  <Dialog
+      <Dialog
         open={!!userToEdit}
         onOpenChange={(open) => !open && setUserToEdit(null)}
       >
@@ -466,7 +623,7 @@ export default function StudentDashboard() {
                     }
                   />
                 </div>
-                <div>
+                {/* <div>
                   <label htmlFor="edit-groupId" className="text-sm font-medium">
                     Группа
                   </label>
@@ -500,7 +657,7 @@ export default function StudentDashboard() {
                       </SelectContent>
                     </Select>
                 
-                </div>
+                </div> */}
               </div>
               <DialogFooter>
                 <Button type="submit">Обновить профиль</Button>
@@ -509,7 +666,6 @@ export default function StudentDashboard() {
           )}
         </DialogContent>
       </Dialog>
-
 
       {/* QR Scanner Modal */}
       <QRScannerModal

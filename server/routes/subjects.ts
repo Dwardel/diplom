@@ -35,9 +35,10 @@ export async function subjectsRoutes(app: Express) {
 
            app.post("/api/admin/subjects", async (req: Request, res: Response) => {
               try {
-                const { name } = req.body;
+                const { name, departmentId } = req.body;
                 const [newGroup] = await storage.createSubject({
                   name,
+                  departmentId,
                 });
           
                 res.status(201).json(newGroup);

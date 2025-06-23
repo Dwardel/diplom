@@ -40,7 +40,7 @@ export default function AdminDepartmentManagement() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [groupToCreate, setGroupToCreate] = useState<Partial<Group> | null>(
+  const [groupToCreate, setGroupToCreate] = useState<Partial<Department> | null>(
     null
   );
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
@@ -150,17 +150,7 @@ export default function AdminDepartmentManagement() {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setLocation("/admin")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+     
 
       <Card className="mb-6">
         <CardContent className="pt-6">

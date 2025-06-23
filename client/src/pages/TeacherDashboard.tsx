@@ -28,23 +28,38 @@ import QRCodeModal from "@/components/QRCodeModal";
 import { Progress } from "@/components/ui/progress";
 import { QRCodeCanvas } from "qrcode.react";
 import { Link } from "wouter";
-import { AttendanceRecord, Class, Department, Group, Subject, User } from "@shared/schema";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AttendanceRecord,
+  Class,
+  Department,
+  Group,
+  Subject,
+  User,
+} from "@shared/schema";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { query } from "express";
 import { record } from "zod";
-
+import { navigate } from "wouter/use-browser-location";
 
 export default function TeacherDashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const {user } = useAuth();
+  const { user } = useAuth();
   const [isQRModalOpen, setQRModalOpen] = useState(false);
   const [activeClassId, setActiveClassId] = useState<number | null>(null);
   const [qrCodeValue, setQrCodeValue] = useState<string>("");
   const [activeClassInfo, setActiveClassInfo] = useState<any>(null);
-   const [userToEdit, setUserToEdit] = useState<Partial<User> | null>(null);
-  
+  const [userToEdit, setUserToEdit] = useState<Partial<User> | null>(null);
+  const [allClassesFlag, setAllClassesFlag] = useState(false);
+  const [groupFilter, setGroupFilter] = useState("all");
+  const [subjectFilter, setSubjectFilter] = useState("all");
   const [newClass, setNewClass] = useState({
     subjectId: "",
     groupId: "",
@@ -53,16 +68,18 @@ export default function TeacherDashboard() {
   });
 
   // Fetch teacher's classes
-  const { data: attendanceRecords, isLoading: attendanceRecordsLoading } = useQuery<AttendanceRecord[]>({
-    queryKey: ["/api/admin/attendanceRecords"],
-    queryFn: getQueryFn({ on401: "throw" }),
-  });
+  const { data: attendanceRecords, isLoading: attendanceRecordsLoading } =
+    useQuery<AttendanceRecord[]>({
+      queryKey: ["/api/admin/attendanceRecords"],
+      queryFn: getQueryFn({ on401: "throw" }),
+    });
 
   const { data: classes, isLoading: classesLoading } = useQuery<Class[]>({
     queryKey: ["/api/teacher/classes"],
     queryFn: getQueryFn({ on401: "throw" }),
+    refetchInterval:2000
   });
-
+ 
   const {
     data: departments,
     isLoading: departmentsLoading,
@@ -76,7 +93,9 @@ export default function TeacherDashboard() {
     queryKey: ["/api/subjects"],
     queryFn: getQueryFn({ on401: "throw" }),
   });
-
+  const filteredSubjects = subjects?.filter(
+    (subject) => subject.departmentId === user?.departmentId
+  )
   // Fetch groups
   const { data: groups, isLoading: groupsLoading } = useQuery<Group[]>({
     queryKey: ["/api/groups"],
@@ -89,7 +108,9 @@ export default function TeacherDashboard() {
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
-  const { data: groupStudents, isLoading: groupStudentsLoading } = useQuery<User[]>({
+  const { data: groupStudents, isLoading: groupStudentsLoading } = useQuery<
+    User[]
+  >({
     queryKey: [`/api/teacher/group/student/${activeClassInfo?.groupId}`],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!activeClassInfo,
@@ -123,8 +144,6 @@ export default function TeacherDashboard() {
       })) || [];
   const results = useQueries({ queries });
 
-
-
   // End class mutation
   const endClassMutation = useMutation({
     mutationFn: async (classId: number) => {
@@ -137,7 +156,9 @@ export default function TeacherDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/student/attendance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teacher/classes"] });
-      queryClient.invalidateQueries({queryKey:["/api/admin/attendanceRecords"]});
+      queryClient.invalidateQueries({
+        queryKey: ["/api/admin/attendanceRecords"],
+      });
       setActiveClassId(null);
       setActiveClassInfo(null);
       toast({
@@ -184,8 +205,8 @@ export default function TeacherDashboard() {
       if (activeClass) {
         setActiveClassId(activeClass.id);
 
-        if (subjects && groups) {
-          const subject = subjects.find(
+        if (filteredSubjects && groups) {
+          const subject = filteredSubjects.find(
             (s: Subject) => s.id === activeClass.subjectId
           );
           const group = groups.find((g: Group) => g.id === activeClass.groupId);
@@ -206,7 +227,7 @@ export default function TeacherDashboard() {
         setActiveClassInfo(null);
       }
     }
-  }, [classes, subjects, groups]);
+  }, [classes, filteredSubjects, groups]);
 
   const handleCreateClass = () => {
     const now = new Date();
@@ -319,61 +340,85 @@ export default function TeacherDashboard() {
   };
 
   // Get attendance stats for classes
-  const getClassesAttendanceStats = () => {
-    if (!classes || !subjects || !groups || !users) return [];
+  // const getClassesAttendanceStats = () => {
+  //   if (!classes || !subjects || !groups || !users) return [];
 
-    return classes.map((cls: Class) => {
-      const subject = subjects.find((s: Subject) => s.id === cls.subjectId);
-      const group = groups.find((g: Group) => g.id === cls.groupId);
+  //   return classes.map((cls: Class) => {
+  //     const subject = subjects.find((s: Subject) => s.id === cls.subjectId);
+  //     const group = groups.find((g: Group) => g.id === cls.groupId);
 
-      const studentsInGroup = users.filter(
-        (user: User) => user.role === "student" && user.groupId === cls.groupId
-      );
+  //     const studentsInGroup = users.filter(
+  //       (user: User) => user.role === "student" && user.groupId === cls.groupId
+  //     );
 
-      const totalStudents = studentsInGroup.length;
+  //     const totalStudents = studentsInGroup.length;
 
-      const presentStudents = Math.floor(totalStudents / totalStudents); // Assuming 70% attendance for demo
+  //     const presentStudents = Math.floor(totalStudents / totalStudents); // Assuming 70% attendance for demo
 
-      return {
-        id: cls.id,
-        subject: subject ? subject.name : "Неизвестный предмет",
-        group: group ? group.name : "Неизвестная группа",
-        attendance: {
-          present: presentStudents,
-          total: totalStudents,
-          percentage: calculateAttendancePercentage(
-            presentStudents,
-            totalStudents
-          ),
-        },
-      };
-    });
-  };
+  //     return {
+  //       id: cls.id,
+  //       subject: subject ? subject.name : "Неизвестный предмет",
+  //       group: group ? group.name : "Неизвестная группа",
+  //       attendance: {
+  //         present: presentStudents,
+  //         total: totalStudents,
+  //         percentage: calculateAttendancePercentage(
+  //           presentStudents,
+  //           totalStudents
+  //         ),
+  //       },
+  //     };
+  //   });
+  // };
 
   // Get recent classes
   const getRecentClasses = () => {
-    if (!classes || !subjects || !groups) return [];
+    if (!classes || !filteredSubjects || !groups) return [];
 
-    return [...classes]
-      .sort(
-        (a: Class, b: Class) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-      )
-      .slice(0, 3)
-      .map((cls: Class, index: number) => {
-        const subject = subjects.find((s: Subject) => s.id === cls.subjectId);
-        const group = groups.find((g: Group) => g.id === cls.groupId);
+    return allClassesFlag
+      ? [...classes]
+          .sort(
+            (a: Class, b: Class) =>
+              new Date(b.date).getTime() - new Date(a.date).getTime()
+          )
+          .map((cls: Class, index: number) => {
+            const subject = filteredSubjects.find(
+              (s: Subject) => s.id === cls.subjectId
+            );
+            const group = groups.find((g: Group) => g.id === cls.groupId);
 
-        const attendanceStats = getClassAttendance(cls.id, index);
+            const attendanceStats = getClassAttendance(cls.id, index);
 
-        return {
-          id: cls.id,
-          date: cls.date,
-          subject: subject ? subject.name : "Неизвестный предмет",
-          group: group ? group.name : "Неизвестная группа",
-          attendance: attendanceStats,
-        };
-      });
+            return {
+              id: cls.id,
+              date: cls.date,
+              subject: subject ? subject.name : "Неизвестный предмет",
+              group: group ? group.name : "Неизвестная группа",
+              attendance: attendanceStats,
+            };
+          })
+      : [...classes]
+          .sort(
+            (a: Class, b: Class) =>
+              new Date(b.date).getTime() - new Date(a.date).getTime()
+          )
+          .slice(0, 3)
+          .map((cls: Class, index: number) => {
+            const subject = filteredSubjects.find(
+              (s: Subject) => s.id === cls.subjectId
+            );
+            const group = groups.find((g: Group) => g.id === cls.groupId);
+
+            const attendanceStats = getClassAttendance(cls.id, index);
+
+            return {
+              id: cls.id,
+              date: cls.date,
+              subject: subject ? subject.name : "Неизвестный предмет",
+              group: group ? group.name : "Неизвестная группа",
+              attendance: attendanceStats,
+            };
+          });
   };
 
   const isLoading =
@@ -381,16 +426,24 @@ export default function TeacherDashboard() {
     subjectsLoading ||
     groupsLoading ||
     usersLoading ||
-    activeRecordsLoading||
+    activeRecordsLoading ||
     groupStudentsLoading ||
     attendanceRecordsLoading;
 
   const attendanceStats = getActiveClassAttendance(Number(activeClassId));
   const recentClasses = getRecentClasses();
+  const filteredRecentClasses = recentClasses?.filter((user: any) => {
+    const matchesGroup = groupFilter === "all" || user.group === groupFilter;
+
+    const matchesSubject =
+      subjectFilter === "all" || user.subject === subjectFilter;
+
+    return matchesGroup && matchesSubject;
+  });
 
   // Get attendance stats for each subject-group combination
   const getAttendanceBySubject = () => {
-    if (!classes || !subjects || !groups) return [];
+    if (!classes || !filteredSubjects || !groups) return [];
 
     const subjectGroupMap = new Map();
 
@@ -407,22 +460,21 @@ export default function TeacherDashboard() {
     });
 
     return Array.from(subjectGroupMap.values()).map((item) => {
-      const subject = subjects.find((s: Subject) => s.id === item.subjectId);
+      const subject = filteredSubjects.find((s: Subject) => s.id === item.subjectId);
       const group = groups.find((g: Group) => g.id === item.groupId);
 
-      
-      const filteredUsers = users?.filter((user) => user.groupId === item.groupId);
+      const filteredUsers = users?.filter(
+        (user) => user.groupId === item.groupId
+      );
       const filteredAttendanceRecords = attendanceRecords
-  ?.filter(record =>
-    filteredUsers?.some(user => user.id === record.studentId)
-  )
-  ?.filter(record => {
-    const cls = classes.find(cls => cls.id === record.classId);
-    return cls?.subjectId === item.subjectId;
-  });
+        ?.filter((record) =>
+          filteredUsers?.some((user) => user.id === record.studentId)
+        )
+        ?.filter((record) => {
+          const cls = classes.find((cls) => cls.id === record.classId);
+          return cls?.subjectId === item.subjectId;
+        });
 
-
-      
       if (!filteredAttendanceRecords) {
         return {
           id: `${item.subjectId}-${item.groupId}`,
@@ -431,8 +483,10 @@ export default function TeacherDashboard() {
           percentage: 0,
         };
       }
-      console.log(filteredAttendanceRecords)
-      const attendancePercentage = filteredAttendanceRecords?.filter((record) => record.status === "present" || record.status === "late")?.length /filteredAttendanceRecords?.length;
+      const attendancePercentage =
+        filteredAttendanceRecords?.filter(
+          (record) => record.status === "present" || record.status === "late"
+        )?.length / filteredAttendanceRecords?.length || 0;
       return {
         id: `${item.subjectId}-${item.groupId}`,
         subject: subject ? subject.name : "Неизвестный предмет",
@@ -443,45 +497,40 @@ export default function TeacherDashboard() {
   };
 
   const subjectAttendance = getAttendanceBySubject();
-  
+
   const handleUpdateUser = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (userToEdit) {
-          try {
-            await apiRequest(
-              "PUT",
-              '/api/user/change',
-              userToEdit
-            );
-            toast({
-              title: "Пользователь обновлен",
-            });
-    
-            // Обновляем список пользователей
-            queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-          } catch (error) {
-            console.error("Ошибка при обновлении пользователя:", error);
-            toast({
-              title: "Ошибка",
-              description: "Не удалось обновить пользователя.",
-              variant: "destructive",
-            });
-          } finally {
-            setUserToEdit(null);
-          }
-        }
-      };
+    e.preventDefault();
+    if (userToEdit) {
+      try {
+        await apiRequest("PUT", "/api/user/change", userToEdit);
+        toast({
+          title: "Пользователь обновлен",
+        });
+
+        // Обновляем список пользователей
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      } catch (error) {
+        console.error("Ошибка при обновлении пользователя:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось обновить пользователя.",
+          variant: "destructive",
+        });
+      } finally {
+        setUserToEdit(null);
+      }
+    }
+  };
 
   return (
     <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-      <h2 className="text-2xl font-medium text-gray-800 mb-4">
-        Панель преподавателя
-      </h2>
-      <Button
-       onClick={() => setUserToEdit(user)}>
-        Изменить профиль
-      </Button>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-medium text-gray-800 mb-4">
+          Панель преподавателя
+        </h2>
+        <Button onClick={() => navigate("/schedule")}>Мое расписание</Button>
+        <Button onClick={() => navigate("/reports")}>Отчеты</Button>
+        <Button onClick={() => setUserToEdit(user)}>Изменить профиль</Button>
       </div>
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -513,8 +562,8 @@ export default function TeacherDashboard() {
                     <SelectValue placeholder="Выберите предмет" />
                   </SelectTrigger>
                   <SelectContent>
-                    {subjects &&
-                      subjects.map((subject: Subject) => (
+                    {filteredSubjects &&
+                      filteredSubjects.map((subject: Subject) => (
                         <SelectItem key={subject.id} value={String(subject.id)}>
                           {subject.name}
                         </SelectItem>
@@ -687,59 +736,61 @@ export default function TeacherDashboard() {
               <div className="bg-gray-50 p-4 rounded-lg">
                 {/* Attendance chart would go here in a real application */}
                 <div className="p-4 bg-white shadow rounded">
+                  <h2 className="text-xl font-semibold mb-4">
+                    Список студентов на этой паре
+                  </h2>
 
-      <h2 className="text-xl font-semibold mb-4">Список студентов на этой паре</h2>
-      
-  {activeClassId && groupStudents && activeAttendanceRecords ? (
-    groupStudents.length === 0 ? (
-      <p className="text-gray-500">Нет студентов в этой группе.</p>
-    ) : (
-      <ul className="space-y-2">
-        {groupStudents.map((student) => {
-          const record = activeAttendanceRecords.find(
-            (rec) => rec.studentId === student.id
-          );
-          const status = record?.status;
+                  {activeClassId && groupStudents && activeAttendanceRecords ? (
+                    groupStudents.length === 0 ? (
+                      <p className="text-gray-500">
+                        Нет студентов в этой группе.
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {groupStudents.map((student) => {
+                          const record = activeAttendanceRecords.find(
+                            (rec) => rec.studentId === student.id
+                          );
+                          const status = record?.status;
 
-          return (
-            <li
-              key={student.id}
-              className={`flex justify-between items-center p-2 rounded ${
-                status ? "bg-green-50" : "bg-red-50"
-              }`}
-            >
-              <span>
-                {student.lastName} {student.firstName}
-              </span>
-              <span
-                className={`text-sm font-medium ${
-                  status === "present"
-                    ? "text-green-600"
-                    : status === "late"
-                    ? "text-yellow-600"
-                    : status === "absent"
-                    ? "text-red-500"
-                    : "text-red-600"
-                }`}
-              >
-                {status === "present"
-                  ? "Присутствовал ✅"
-                  : status === "late"
-                  ? "Опоздал ⏱️"
-                  : status === "absent"
-                  ? "Отсутствовал ❌"
-                  : "QR-код не отсканирован ❌"}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-    )
-  ) : (
-    <p className="text-gray-500">Нет активного занятия</p>
-  )}
-</div>
-
+                          return (
+                            <li
+                              key={student.id}
+                              className={`flex justify-between items-center p-2 rounded ${
+                                status ? "bg-green-50" : "bg-red-50"
+                              }`}
+                            >
+                              <span>
+                                {student.lastName} {student.firstName}
+                              </span>
+                              <span
+                                className={`text-sm font-medium ${
+                                  status === "present"
+                                    ? "text-green-600"
+                                    : status === "late"
+                                    ? "text-yellow-600"
+                                    : status === "absent"
+                                    ? "text-red-500"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                {status === "present"
+                                  ? "Присутствовал ✅"
+                                  : status === "late"
+                                  ? "Опоздал ⏱️"
+                                  : status === "absent"
+                                  ? "Отсутствовал ❌"
+                                  : "QR-код не отсканирован ❌"}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )
+                  ) : (
+                    <p className="text-gray-500">Нет активного занятия</p>
+                  )}
+                </div>
               </div>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg mb-4">
@@ -787,8 +838,68 @@ export default function TeacherDashboard() {
       <Card>
         <CardContent className="p-6">
           <h3 className="text-xl font-medium text-gray-800 mb-4">
-            Недавние занятия
+            {allClassesFlag ? "Все занятия" : "Недавние занятия"}
           </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Группа */}
+            <div>
+              <Label
+                htmlFor="group"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Группа
+              </Label>
+              <Select
+                onValueChange={setGroupFilter}
+                value={groupFilter}
+                disabled={isLoading || groups?.length === 0}
+              >
+                <SelectTrigger id="group" className="w-full">
+                  <SelectValue placeholder="Выберите группу" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key={0} value="all">
+                    Все
+                  </SelectItem>
+                  {groups?.map((group: any) => (
+                    <SelectItem key={group.id} value={group.name}>
+                      {group.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Предмет */}
+            <div>
+              <Label
+                htmlFor="subject"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Предмет
+              </Label>
+              <Select
+                onValueChange={setSubjectFilter}
+                value={subjectFilter}
+                disabled={isLoading || filteredSubjects?.length === 0}
+              >
+                <SelectTrigger id="subject" className="w-full">
+                  <SelectValue placeholder="Выберите предмет" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key={0} value="all">
+                    Все
+                  </SelectItem>
+                  {filteredSubjects?.map((subject: any) => (
+                    <SelectItem key={subject.id} value={subject.name}>
+                      {subject.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -829,8 +940,8 @@ export default function TeacherDashboard() {
                       Загрузка...
                     </td>
                   </tr>
-                ) : recentClasses.length > 0 ? (
-                  recentClasses.map((classItem) => {
+                ) : filteredRecentClasses.length > 0 ? (
+                  filteredRecentClasses.map((classItem) => {
                     if (classItem.attendance !== null)
                       return (
                         <tr key={classItem.id}>
@@ -878,13 +989,17 @@ export default function TeacherDashboard() {
             </table>
           </div>
           <div className="flex justify-center mt-4">
-            <Button variant="link" className="text-primary">
-              <Link href="teacher/classes">Все занятия</Link>
+            <Button
+              variant="link"
+              className="text-primary"
+              onClick={() => setAllClassesFlag(!allClassesFlag)}
+            >
+              {allClassesFlag ? "Недавние Занятия" : "Все Занятия"}
             </Button>
           </div>
         </CardContent>
       </Card>
- <Dialog
+      <Dialog
         open={!!userToEdit}
         onOpenChange={(open) => !open && setUserToEdit(null)}
       >
@@ -984,37 +1099,36 @@ export default function TeacherDashboard() {
                   <label htmlFor="edit-groupId" className="text-sm font-medium">
                     Кафедра
                   </label>
-                   
-                    <Select
-                      value={
-                        departments?.find(
-                          (f) => f.id === userToEdit?.departmentId
-                        )?.name ?? ""
+
+                  <Select
+                    value={
+                      departments?.find(
+                        (f) => f.id === userToEdit?.departmentId
+                      )?.name ?? ""
+                    }
+                    onValueChange={(selectedName) => {
+                      const selectedFaculty = departments?.find(
+                        (f) => f.name === selectedName
+                      );
+                      if (selectedFaculty) {
+                        setUserToEdit({
+                          ...userToEdit,
+                          departmentId: selectedFaculty.id,
+                        });
                       }
-                      onValueChange={(selectedName) => {
-                        const selectedFaculty = departments?.find(
-                          (f) => f.name === selectedName
-                        );
-                        if (selectedFaculty) {
-                          setUserToEdit({
-                            ...userToEdit,
-                            departmentId: selectedFaculty.id,
-                          });
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите кафедру" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {departments?.map((faculty) => (
-                          <SelectItem key={faculty.id} value={faculty.name}>
-                            {faculty.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Выберите кафедру" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments?.map((faculty) => (
+                        <SelectItem key={faculty.id} value={faculty.name}>
+                          {faculty.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <DialogFooter>

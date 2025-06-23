@@ -1,0 +1,41 @@
+config:
+  target: 'http://localhost:5000'
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Simple load test"
+  
+  http:
+    timeout: 30
+
+scenarios:
+  - name: "Basic API Test"
+    weight: 100
+    flow:
+      - get:
+          url: "/api/groups"
+          expect:
+            - statusCode: 200
+      
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "dwxrdel"
+            password1: "MafiA228"
+          
+          expect:
+            - statusCode: 200
+      
+      - get:
+          url: "/api/student/classes"
+          headers:
+            Cookie: "{{ sessionCookie }}"
+          expect:
+            - statusCode: 200
+      
+      - post:
+          url: "/api/auth/logout"
+          headers:
+            Cookie: "{{ sessionCookie }}"
+          expect:
+            - statusCode: 200

@@ -49,7 +49,13 @@ import {
 } from "@shared/schema";
 import { group } from "console";
 import { record } from "zod";
-
+import AdminScheduleManagement from "./AdminSchedule";
+import AdminGroupManagement from "./AdminGroupManagement";
+import AdminDepartmentManagement from "./AdminDepartmentManagement";
+import AdminFacultyManagement from "./AdminFacultyManagent";
+import AdminSubjectsManagement from "./AdminSubjectsManagement";
+import AdminUsersManagement from "./AdminUsersManagement";
+import ReportsManagement from "./ReportsManagement";
 export default function AdminDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -431,6 +437,12 @@ export default function AdminDashboard() {
                 Отчеты
               </TabsTrigger>
               <TabsTrigger
+                value="schedules"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none border-b-2 border-transparent px-6 py-4 font-medium text-sm"
+              >
+                Расписание
+              </TabsTrigger>
+              <TabsTrigger
                 value="users"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none border-b-2 border-transparent px-6 py-4 font-medium text-sm"
               >
@@ -464,385 +476,42 @@ export default function AdminDashboard() {
           </div>
           <div className="p-6">
             <TabsContent value="reports" className="m-0">
-              <div className="mb-6">
-                <h3 className="text-lg font-medium text-gray-800 mb-4">
-                  Создать отчет
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <Label
-                      htmlFor="reportName"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Название отчета
-                    </Label>
-                    <Input
-                      id="reportName"
-                      value={reportForm.name}
-                      onChange={(e) =>
-                        handleReportFormChange("name", e.target.value)
-                      }
-                      placeholder="Введите название отчета"
-                    />
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="reportType"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Тип отчета
-                    </Label>
-                    <Select
-                      value={reportForm.type}
-                      onValueChange={(value) =>
-                        handleReportFormChange("type", value)
-                      }
-                    >
-                      <SelectTrigger id="reportType" className="w-full">
-                        <SelectValue placeholder="Выберите тип отчета" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="attendance">Посещаемость</SelectItem>
-                        <SelectItem value="stats">
-                          Статистика по преподавателям
-                        </SelectItem>
-                        <SelectItem value="groups">
-                          Статистика по группам
-                        </SelectItem>
-                        <SelectItem value="subjects">
-                          Статистика по предметам
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="reportPeriod"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Период
-                    </Label>
-                    <Select
-                      value={reportForm.period}
-                      onValueChange={(value) =>
-                        handleReportFormChange("period", value)
-                      }
-                    >
-                      <SelectTrigger id="reportPeriod" className="w-full">
-                        <SelectValue placeholder="Выберите период" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="week">Неделя</SelectItem>
-                        <SelectItem value="month">Месяц</SelectItem>
-                        <SelectItem value="semester">Семестр</SelectItem>
-                        <SelectItem value="year">Год</SelectItem>
-                        <SelectItem value="custom">
-                          Произвольный период
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {reportForm.period === "custom" && (
-                    <>
-                      <div>
-                        <Label
-                          htmlFor="startDate"
-                          className="block text-sm font-medium text-gray-700 mb-1"
-                        >
-                          Дата начала
-                        </Label>
-                        <Input
-                          id="startDate"
-                          type="date"
-                          value={reportForm.startDate}
-                          onChange={(e) =>
-                            handleReportFormChange("startDate", e.target.value)
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label
-                          htmlFor="endDate"
-                          className="block text-sm font-medium text-gray-700 mb-1"
-                        >
-                          Дата окончания
-                        </Label>
-                        <Input
-                          id="endDate"
-                          type="date"
-                          value={reportForm.endDate}
-                          onChange={(e) =>
-                            handleReportFormChange("endDate", e.target.value)
-                          }
-                        />
-                      </div>
-                    </>
-                  )}
-                  <div>
-                    <Label
-                      htmlFor="reportFormat"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Формат
-                    </Label>
-                    <Select
-                      value={reportForm.format}
-                      onValueChange={(value) =>
-                        handleReportFormChange("format", value)
-                      }
-                    >
-                      <SelectTrigger id="reportFormat" className="w-full">
-                        <SelectValue placeholder="Выберите формат" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pdf">PDF</SelectItem>
-                        <SelectItem value="excel">Excel</SelectItem>
-                        <SelectItem value="csv">CSV</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="md:col-span-2 lg:col-span-3">
-                    <Button
-                      className="w-full"
-                      onClick={handleGenerateReport}
-                      disabled={generateReportMutation.isPending}
-                    >
-                      <ClipboardList className="mr-2 h-4 w-4" />
-                      {generateReportMutation.isPending
-                        ? "Формирование..."
-                        : "Сформировать отчет"}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium text-gray-800 mb-4">
-                  Сохраненные отчеты
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Название
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Тип
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Период
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Создан
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Формат
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Действия
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {reports?.map((report) => (
-                        <tr key={report.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                            {report.name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                            {getReportTypeLabel(report.type)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                            {getPeriodLabel(report.period)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                            {new Date(report.createdAt).toLocaleString(
-                              "ru-RU",
-                              {
-                                timeZone: "UTC",
-                                year: "numeric",
-                                month: "2-digit",
-                                day: "2-digit",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              }
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                            <span
-                              className={`px-2 py-1 text-xs rounded ${
-                                report.format === "pdf"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : report.format === "excel"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {report.format.toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div className="flex space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-gray-500 hover:text-gray-700"
-                                onClick={() =>
-                                  handleDownloadReport(
-                                    report.id,
-                                    report.format,
-                                    report.name
-                                  )
-                                }
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-red-500 hover:text-red-700"
-                                onClick={() => handleDeleteReport(report.id)}
-                                disabled={deleteReportMutation.isPending}
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                      {(!reports || reports.length === 0) && (
-                        <tr>
-                          <td
-                            colSpan={6}
-                            className="px-6 py-4 text-center text-gray-500"
-                          >
-                            Отчеты не найдены
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+             <ReportsManagement/>
             </TabsContent>
 
             <TabsContent value="users" className="m-0">
-              <div className="text-center py-16">
-                <div className="text-gray-400 text-5xl mb-4">
-                  <Users className="h-16 w-16 mx-auto opacity-20" />
-                </div>
-                <h3 className="text-xl font-medium text-gray-700 mb-2">
-                  Управление пользователями
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  Здесь вы можете добавлять, редактировать и удалять
-                  пользователей системы
-                </p>
-                <Button
-                  className="mt-2"
-                  onClick={() => setLocation("/admin/users")}
-                >
-                  Управление пользователями
-                </Button>
+            <div className="text-center py-16">
+               <AdminUsersManagement/>
               </div>
             </TabsContent>
 
-            <TabsContent value="groups" className="m-0">
+ <TabsContent value="schedules" className="m-0">
               <div className="text-center py-16">
-                <div className="text-gray-400 text-5xl mb-4">
-                  <Users className="h-16 w-16 mx-auto opacity-20" />
-                </div>
-                <h3 className="text-xl font-medium text-gray-700 mb-2">
-                  Управление группами
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  Здесь вы можете создавать и редактировать группы студентов
-                </p>
-                <Button
-                  className="mt-2"
-                  onClick={() => setLocation("/admin/groups")}
-                >
-                  Управление группами
-                </Button>
+               <AdminScheduleManagement/>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="groups" className="m-0">
+             <div className="text-center py-16">
+               <AdminGroupManagement/>
               </div>
             </TabsContent>
 
             <TabsContent value="departments" className="m-0">
-              <div className="text-center py-16">
-                <div className="text-gray-400 text-5xl mb-4">
-                  <Users className="h-16 w-16 mx-auto opacity-20" />
-                </div>
-                <h3 className="text-xl font-medium text-gray-700 mb-2">
-                  Управление кафедрами
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  Здесь вы можете создавать и редактировать кафедры
-                </p>
-                <Button
-                  className="mt-2"
-                  onClick={() => setLocation("/admin/departments")}
-                >
-                  Управление кафедрами
-                </Button>
+             <div className="text-center py-16">
+               <AdminDepartmentManagement/>
               </div>
             </TabsContent>
 
             <TabsContent value="faculties" className="m-0">
               <div className="text-center py-16">
-                <div className="text-gray-400 text-5xl mb-4">
-                  <Users className="h-16 w-16 mx-auto opacity-20" />
-                </div>
-                <h3 className="text-xl font-medium text-gray-700 mb-2">
-                  Управление факультетами
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  Здесь вы можете создавать и редактировать факультеты
-                </p>
-                <Button
-                  className="mt-2"
-                  onClick={() => setLocation("/admin/faculties")}
-                >
-                  Управление факультетами
-                </Button>
+               <AdminFacultyManagement/>
               </div>
             </TabsContent>
 
             <TabsContent value="subjects" className="m-0">
               <div className="text-center py-16">
-                <div className="text-gray-400 text-5xl mb-4">
-                  <FileText className="h-16 w-16 mx-auto opacity-20" />
-                </div>
-                <h3 className="text-xl font-medium text-gray-700 mb-2">
-                  Управление предметами
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  Здесь вы можете добавлять и редактировать учебные предметы
-                </p>
-                <Button
-                  className="mt-2"
-                  onClick={() => setLocation("/admin/subjects")}
-                >
-                  Управление предметами
-                </Button>
+               <AdminSubjectsManagement/>
               </div>
             </TabsContent>
           </div>

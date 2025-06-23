@@ -124,7 +124,7 @@ export default function AdminRegisterUser({ isEditing = false }: { isEditing?: b
         
         // Обновляем данные в кэше запросов
         queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
-        setLocation('/admin/users');
+        setLocation('/admin');
       } else {
         console.log('Регистрация пользователя:', payload);
         
@@ -159,7 +159,7 @@ export default function AdminRegisterUser({ isEditing = false }: { isEditing?: b
   return (
     <div className="container mx-auto py-6">
       <div className="flex items-center mb-6">
-        <Button variant="outline" size="icon" onClick={() => setLocation('/admin/users')} className="mr-4">
+        <Button variant="outline" size="icon" onClick={() => setLocation('/admin')} className="mr-4">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h2 className="text-2xl font-bold">

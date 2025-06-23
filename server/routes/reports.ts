@@ -28,10 +28,11 @@ export async function reportsRoutes(app: Express) {
         app.get(
             "/api/admin/reports",
             isAuthenticated,
-            hasRole(["admin"]),
+            hasRole(["admin", 'teacher']),
             async (req: Request, res: Response) => {
               try {
-                const reports = await storage.getAllReports();
+                const id = req.session.userId!;
+                const reports = await storage.getAllReports(id);
                 res.json(reports);
               } catch (err) {
                 console.error("Ошибка получения отчетов:", err);
@@ -45,7 +46,7 @@ export async function reportsRoutes(app: Express) {
            app.post(
               "/api/admin/reports",
               isAuthenticated,
-              hasRole(["admin"]),
+              hasRole(["admin", 'teacher']),
               async (req: Request, res: Response) => {
                 try {
                   const { name, type, period, format, startDate, endDate, data } =
@@ -73,7 +74,7 @@ export async function reportsRoutes(app: Express) {
             app.get(
                 "/api/admin/reports/:id/download",
                 isAuthenticated,
-                hasRole(["admin"]),
+                hasRole(["admin", 'teacher']),
                 async (req: Request, res: Response) => {
                   try {
                     const reportId = parseInt(req.params.id);
@@ -151,28 +152,28 @@ export async function reportsRoutes(app: Express) {
             
                   // 📝 Заголовок
                   doc
-                    .font(path.join(__dirname, "fonts", "TIMES.TTF"))
+                    .font(path.join(__dirname, "../fonts", "TIMES.TTF"))
                     .fontSize(20)
                     .text("Отчет системы посещаемости", { align: "center" });
                   doc.moveDown();
             
                   // 📄 Инфо
                   doc
-                    .font(path.join(__dirname, "fonts", "TIMES.TTF"))
+                    .font(path.join(__dirname, "../fonts", "TIMES.TTF"))
                     .fontSize(14)
                     .text("Информация об отчете:");
                   doc.fontSize(12);
                   doc
-                    .font(path.join(__dirname, "fonts", "TIMES.TTF"))
+                    .font(path.join(__dirname, "../fonts", "TIMES.TTF"))
                     .text(`Название: ${report.name}`);
                   doc
-                    .font(path.join(__dirname, "fonts", "TIMES.TTF"))
+                    .font(path.join(__dirname, "../fonts", "TIMES.TTF"))
                     .text(`Тип: ${getReportTypeLabel(report.type)}`);
                   doc
-                    .font(path.join(__dirname, "fonts", "TIMES.TTF"))
+                    .font(path.join(__dirname, "../fonts", "TIMES.TTF"))
                     .text(`Период: ${getReportPeriodLabel(report.period)}`);
                   doc
-                    .font(path.join(__dirname, "fonts", "TIMES.TTF"))
+                    .font(path.join(__dirname, "../fonts", "TIMES.TTF"))
                     .text(
                       `Дата создания: ${new Date(report.createdAt).toLocaleDateString(
                         "ru-RU"
@@ -182,14 +183,14 @@ export async function reportsRoutes(app: Express) {
             
                   if (report.type === "attendance") {
                     doc
-                      .font(path.join(__dirname, "fonts", "TIMES.TTF"))
+                      .font(path.join(__dirname, "../fonts", "TIMES.TTF"))
                       .text(`Всего занятий: ${report.data.totalClasses}`);
                     doc
-                      .font(path.join(__dirname, "fonts", "TIMES.TTF"))
+                      .font(path.join(__dirname, "../fonts", "TIMES.TTF"))
                       .text(`Всего студентов: ${report.data.totalStudents}`);
                     doc.moveDown();
                     if (report.data?.attendanceByGroup?.length) {
-                      const fontPath = path.join(__dirname, "fonts", "TIMES.TTF");
+                      const fontPath = path.join(__dirname, "../fonts", "TIMES.TTF");
                       doc
                         .font(fontPath)
                         .fontSize(14)
@@ -219,7 +220,7 @@ export async function reportsRoutes(app: Express) {
                     }
                   } else if (report.type === "stats") {
                     if (report.data?.teacherActivity?.length) {
-                      const fontPath = path.join(__dirname, "fonts", "TIMES.TTF");
+                      const fontPath = path.join(__dirname, "../fonts", "TIMES.TTF");
             
                       doc
                         .font(fontPath)
@@ -252,7 +253,7 @@ export async function reportsRoutes(app: Express) {
                     }
                   } else if (report.type === "groups") {
                     if (report.data?.studentsPerGroup?.length) {
-                      const fontPath = path.join(__dirname, "fonts", "TIMES.TTF");
+                      const fontPath = path.join(__dirname, "../fonts", "TIMES.TTF");
             
                       doc
                         .font(fontPath)
@@ -279,7 +280,7 @@ export async function reportsRoutes(app: Express) {
                     }
                   } else if (report.type === "subjects") {
                     if (report.data?.subjectPopularity?.length) {
-                      const fontPath = path.join(__dirname, "fonts", "TIMES.TTF");
+                      const fontPath = path.join(__dirname, "../fonts", "TIMES.TTF");
             
                       doc
                         .font(fontPath)
@@ -311,7 +312,7 @@ export async function reportsRoutes(app: Express) {
                   // 📎 Футер
                   doc.moveDown();
                   doc
-                    .font(path.join(__dirname, "fonts", "TIMES.TTF"))
+                    .font(path.join(__dirname, "../fonts", "TIMES.TTF"))
                     .fontSize(8)
                     .text(
                       `Отчет сгенерирован ${new Date().toLocaleString("ru-RU", {
@@ -335,7 +336,7 @@ export async function reportsRoutes(app: Express) {
              app.delete(
     "/api/admin/reports/:id",
     isAuthenticated,
-    hasRole(["admin"]),
+    hasRole(["admin", 'teacher']),
     async (req: Request, res: Response) => {
       try {
         const reportId = parseInt(req.params.id);

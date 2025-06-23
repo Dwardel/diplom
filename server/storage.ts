@@ -107,6 +107,16 @@ export const storage = {
     }
   },
 
+    async getAllSchedules() {
+    try {
+      const schedules = await db.select().from(schema.schedules);
+      return schedules;
+    } catch (error) {
+      console.error("Error getting all users:", error);
+      return null;
+    }
+  },
+
     async getUsersByGroupId(groupId: number) {
     try {
       const users = await db.select().from(schema.users).where(eq(schema.users.groupId, groupId)).orderBy(schema.users.id);
@@ -119,6 +129,26 @@ export const storage = {
     async getTeachers() {
     try {
       const users = await db.select().from(schema.users).where(eq(schema.users.role, 'teacher'));
+      return users;
+    } catch (error) {
+      console.error("Error getting all users:", error);
+      return null;
+    }
+  },
+
+     async getTeacherSchedules(id: number) {
+    try {
+      const users = await db.select().from(schema.schedules).where(eq(schema.schedules.teacherId, id));
+      return users;
+    } catch (error) {
+      console.error("Error getting all users:", error);
+      return null;
+    }
+  },
+
+       async getStudentSchedules(id: number) {
+    try {
+      const users = await db.select().from(schema.schedules).where(eq(schema.schedules.groupId, id));
       return users;
     } catch (error) {
       console.error("Error getting all users:", error);
@@ -152,12 +182,12 @@ export const storage = {
           id: schema.groups.id,
           name: schema.groups.name,
 
-          facultyName: schema.faculties.name,
+          facultyName: schema.departments.name,
         })
         .from(schema.groups)
         .leftJoin(
-          schema.faculties,
-          eq(schema.faculties.id, schema.groups.facultyId)
+          schema.departments,
+          eq(schema.departments.id, schema.groups.departmentId)
         ).orderBy(schema.groups.id);
       return groups;
     } catch (error) {
@@ -223,9 +253,22 @@ export const storage = {
     return await db.insert(schema.groups).values(groupData).returning();
   },
 
+    async createSchedule(groupData: schema.InsertSchedule) {
+    return await db.insert(schema.schedules).values(groupData).returning();
+  },
+
   async deleteGroup(id: number) {
     try {
       await db.delete(schema.groups).where(eq(schema.groups.id, id));
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      throw new Error("Failed to delete task");
+    }
+  },
+
+  async deleteSchedule(id: number) {
+    try {
+      await db.delete(schema.schedules).where(eq(schema.schedules.id, id));
     } catch (error) {
       console.error("Error deleting task:", error);
       throw new Error("Failed to delete task");
@@ -317,6 +360,21 @@ export const storage = {
         .update(schema.classes)
         .set(updatedClass)
         .where(eq(schema.classes.id, id))
+        .returning();
+
+      return updatedExercise;
+    } catch (error) {
+      console.error("Error ending class:", error);
+      return undefined;
+    }
+  },
+
+    async updateSchedule(id: number, updatedClass: Partial<schema.InsertSchedule>) {
+    try {
+      const [updatedExercise] = await db
+        .update(schema.schedules)
+        .set(updatedClass)
+        .where(eq(schema.schedules.id, id))
         .returning();
 
       return updatedExercise;
@@ -459,11 +517,12 @@ export const storage = {
   },
 
   // Reports methods
-  async getAllReports() {
+  async getAllReports(id:number) {
     try {
       const reportsData = await db
         .select()
         .from(schema.reports)
+        .where(eq(schema.reports.createdBy,id))
         .orderBy(desc(schema.reports.createdAt));
       return reportsData;
     } catch (error) {

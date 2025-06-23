@@ -59,8 +59,8 @@ export default function AdminGroupManagement() {
     data: faculities,
     isLoading: faculitiesLoading,
     error: faculitiesError,
-  } = useQuery<Faculty[]>({
-    queryKey: ["/api/admin/faculties"],
+  } = useQuery<Department[]>({
+    queryKey: ["/api/departments"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
@@ -146,17 +146,6 @@ export default function AdminGroupManagement() {
   };
   return (
     <div className="container mx-auto py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setLocation("/admin")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
 
       <Card className="mb-6">
         <CardContent className="pt-6">
@@ -190,8 +179,8 @@ export default function AdminGroupManagement() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Группа/Кафедра</TableHead>
-                    <TableHead>Факультет</TableHead>
+                    <TableHead>Группа</TableHead>
+                    <TableHead>Кафедра</TableHead>
                     <TableHead className="text-right">Действия</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -264,7 +253,7 @@ export default function AdminGroupManagement() {
         open={!!groupToCreate}
         onOpenChange={(open) => !open && setGroupToCreate(null)}
       >
-        <Button onClick={() => setGroupToCreate({ name: "", facultyId: 0 })}>
+        <Button onClick={() => setGroupToCreate({ name: "", departmentId: 0 })}>
           Добавить группу
         </Button>
         <DialogContent>
@@ -293,11 +282,11 @@ export default function AdminGroupManagement() {
 
                 <div className="space-y-2">
                   <label htmlFor="create-role" className="text-sm font-medium">
-                    Факультет
+                    Кафедра
                   </label>
                   <Select
                     value={
-                      faculities?.find((f) => f.id === groupToCreate?.facultyId)
+                      faculities?.find((f) => f.id === groupToCreate?.departmentId)
                         ?.name ?? ""
                     }
                     onValueChange={(selectedName) => {
@@ -307,13 +296,13 @@ export default function AdminGroupManagement() {
                       if (selectedFaculty) {
                         setGroupToCreate({
                           ...groupToCreate,
-                          facultyId: selectedFaculty.id,
+                          departmentId: selectedFaculty.id,
                         });
                       }
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Выберите факультет" />
+                      <SelectValue placeholder="Выберите Кафедру" />
                     </SelectTrigger>
                     <SelectContent>
                       {faculities?.map((faculty) => (
@@ -365,11 +354,11 @@ export default function AdminGroupManagement() {
                     htmlFor="edit-facultyId"
                     className="text-sm font-medium"
                   >
-                    Факультет
+                    Кафедра
                   </label>
                   <Select
                     value={
-                      faculities?.find((f) => f.id === groupToEdit?.facultyId)
+                      faculities?.find((f) => f.id === groupToEdit?.departmentId)
                         ?.name ?? ""
                     }
                     onValueChange={(selectedName) => {
@@ -379,13 +368,13 @@ export default function AdminGroupManagement() {
                       if (selectedFaculty) {
                         setGroupToEdit({
                           ...groupToEdit,
-                          facultyId: selectedFaculty.id,
+                          departmentId: selectedFaculty.id,
                         });
                       }
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Выберите факультет" />
+                      <SelectValue placeholder="Выберите кафедру" />
                     </SelectTrigger>
                     <SelectContent>
                       {faculities?.map((faculty) => (

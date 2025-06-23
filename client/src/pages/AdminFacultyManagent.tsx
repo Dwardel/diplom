@@ -138,13 +138,7 @@ export default function AdminFacultyManagement() {
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setLocation("/admin")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+       
           <h2 className="text-2xl font-bold">Управление факультетами</h2>
         </div>
       </div>

@@ -5,7 +5,7 @@ import { seedDemoAccounts } from "./seed";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import dotenv from "dotenv";
-
+import {initializeScheduler} from './scheduler';
 // Загрузка .env переменных
 dotenv.config();
 
@@ -54,7 +54,7 @@ app.use((req, res, next) => {
 
     // Роуты API
     const server = await registerRoutes(app);
-
+    initializeScheduler();
     // Обработка ошибок (после роутов)
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
